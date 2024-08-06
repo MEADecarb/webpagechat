@@ -3,7 +3,7 @@ import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import tempfile
+import hashlib
 
 # Configure the Gemini API using Streamlit secrets
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -31,6 +31,7 @@ def scrape_website(url):
         return "", []
 
 # Function to scrape all indexed URLs
+@st.cache_data(show_spinner=False)
 def scrape_all_urls(base_url):
     all_content = ""
     visited_urls = set()
@@ -50,31 +51,24 @@ def scrape_all_urls(base_url):
 def split_content(content, max_size=20000):
     return [content[i:i+max_size] for i in range(0, len(content), max_size)]
 
-# Function to upload content and get chatbot response
-def get_chatbot_response(prompt, context):
+# Function to hash the prompt and context for caching
+def hash_prompt_context(prompt, context):
+    return hashlib.sha256(f"{prompt}{context}".encode()).hexdigest()
+
+# Function to get chatbot response
+@st.cache_data(show_spinner=False)
+def get_chatbot_response_cached(prompt, context):
     model = genai.GenerativeModel('gemini-pro')
     responses = []
 
     context_chunks = split_content(context)
     for chunk in context_chunks:
         try:
-            if len(chunk) > 20000:  # If chunk is too large, use File API
-                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                    temp_file.write(chunk.encode())
-                    temp_file_path = temp_file.name
-
-                file = genai.upload_file(temp_file_path)
-                response = model.generate_content(f"Context file uploaded: {file}\n\nUser: {prompt}")
-            else:
-                response = model.generate_content(f"Context: {chunk}\n\nUser: {prompt}")
-                
+            response = model.generate_content(f"Context: {chunk}\n\nUser: {prompt}")
             responses.append(response.text)
         except Exception as e:
-            if "Resource has been exhausted" in str(e):
-                st.error("API quota exceeded. Please check your usage limits.")
-                break
-            else:
-                st.warning(f"Failed to get response for a chunk: {e}")
+            st.warning(f"Failed to get response for a chunk: {e}")
+            break
     
     return " ".join(responses)
 
@@ -90,7 +84,10 @@ st.subheader("Chat with your website")
 user_input = st.text_input("You:", key="user_input")
 
 if user_input:
-    response = get_chatbot_response(user_input, st.session_state.all_content)
+    # Generate a cache key based on the prompt and context
+    cache_key = hash_prompt_context(user_input, st.session_state.all_content)
+    # Get the chatbot response using the cached function
+    response = get_chatbot_response_cached(user_input, st.session_state.all_content)
     st.text_area("Chatbot:", value=response, height=200, max_chars=None, key="chatbot_response")
 
 # Display total count of indexed URLs
