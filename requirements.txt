@@ -1,4 +1,6 @@
 streamlit
-google-generativeai
 requests
 beautifulsoup4
+urllib3  # urllib3 is a dependency for requests
+hashlib
+google.generativeai  # Might require specific setup
