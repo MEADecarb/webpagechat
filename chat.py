@@ -70,7 +70,11 @@ def get_chatbot_response(prompt, context):
                 
             responses.append(response.text)
         except Exception as e:
-            st.warning(f"Failed to get response for a chunk: {e}")
+            if "Resource has been exhausted" in str(e):
+                st.error("API quota exceeded. Please check your usage limits.")
+                break
+            else:
+                st.warning(f"Failed to get response for a chunk: {e}")
     
     return " ".join(responses)
 
