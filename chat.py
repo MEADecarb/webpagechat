@@ -12,43 +12,48 @@ BASE_URL = "https://energy.maryland.gov/Pages/default.aspx"
 
 # Function to scrape website content
 def scrape_website(url):
-  response = requests.get(url)
-  soup = BeautifulSoup(response.text, 'html.parser')
-  
-  # Extract text from all paragraphs
-  text = ' '.join([p.get_text() for p in soup.find_all('p')])
-  
-  # Extract links to other pages within the same domain
-  links = [urljoin(BASE_URL, a['href']) for a in soup.find_all('a', href=True) 
-           if a['href'].startswith('/') or a['href'].startswith(BASE_URL)]
-  
-  return text, links
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Extract text from all paragraphs
+        text = ' '.join([p.get_text() for p in soup.find_all('p')])
+        
+        # Extract links to other pages within the same domain
+        links = [urljoin(BASE_URL, a['href']) for a in soup.find_all('a', href=True) 
+                 if a['href'].startswith('/') or a['href'].startswith(BASE_URL)]
+        
+        return text, links
+    except requests.RequestException as e:
+        st.error(f"Failed to scrape {url}: {e}")
+        return "", []
 
 # Function to scrape all indexed URLs
 def scrape_all_urls(base_url):
-  all_content = ""
-  visited_urls = set()
-  urls_to_visit = [base_url]
+    all_content = ""
+    visited_urls = set()
+    urls_to_visit = [base_url]
 
-  while urls_to_visit:
-      url = urls_to_visit.pop(0)
-      if url not in visited_urls:
-          visited_urls.add(url)
-          content, links = scrape_website(url)
-          all_content += f"\n\nContent from {url}:\n{content}"
-          urls_to_visit.extend([link for link in links if link not in visited_urls])
+    while urls_to_visit:
+        url = urls_to_visit.pop(0)
+        if url not in visited_urls:
+            visited_urls.add(url)
+            content, links = scrape_website(url)
+            all_content += f"\n\nContent from {url}:\n{content}"
+            urls_to_visit.extend([link for link in links if link not in visited_urls])
 
-  return all_content, list(visited_urls)
+    return all_content, list(visited_urls)
 
 # Function to get chatbot response
 def get_chatbot_response(prompt, context):
-  model = genai.GenerativeModel('gemini-pro')
-  response = model.generate_content(f"Context: {context}\n\nUser: {prompt}")
-  return response.text
+    model = genai.GenerativeModel('gemini-pro')
+    response = model.generate_content(f"Context: {context}\n\nUser: {prompt}")
+    return response.text
 
 # Initialize session state
 if 'all_content' not in st.session_state:
-  st.session_state.all_content, st.session_state.all_urls = scrape_all_urls(BASE_URL)
+    st.session_state.all_content, st.session_state.all_urls = scrape_all_urls(BASE_URL)
 
 # Streamlit UI
 st.title("Website Chatbot")
@@ -58,8 +63,8 @@ st.subheader("Chat with your website")
 user_input = st.text_input("You:", key="user_input")
 
 if user_input:
-  response = get_chatbot_response(user_input, st.session_state.all_content)
-  st.text_area("Chatbot:", value=response, height=200, max_chars=None, key="chatbot_response")
+    response = get_chatbot_response(user_input, st.session_state.all_content)
+    st.text_area("Chatbot:", value=response, height=200, max_chars=None, key="chatbot_response")
 
 # Display total count of indexed URLs
 st.subheader("Website Pages")
@@ -71,6 +76,6 @@ st.write(st.session_state.all_content[:500] + "...")  # Display first 500 charac
 
 # Add a button to refresh content
 if st.button("Refresh Content"):
-  st.session_state.all_content, st.session_state.all_urls = scrape_all_urls(BASE_URL)
-  st.success("Content refreshed from all indexed URLs")
-  st.rerun()
+    st.session_state.all_content, st.session_state.all_urls = scrape_all_urls(BASE_URL)
+    st.success("Content refreshed from all indexed URLs")
+    st.experimental_rerun()
