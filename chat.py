@@ -3,6 +3,7 @@ import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import tempfile
 
 # Configure the Gemini API using Streamlit secrets
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -49,15 +50,27 @@ def scrape_all_urls(base_url):
 def split_content(content, max_size=20000):
     return [content[i:i+max_size] for i in range(0, len(content), max_size)]
 
-# Function to get chatbot response
+# Function to upload content and get chatbot response
 def get_chatbot_response(prompt, context):
     model = genai.GenerativeModel('gemini-pro')
-    context_chunks = split_content(context)
     responses = []
-    
+
+    context_chunks = split_content(context)
     for chunk in context_chunks:
-        response = model.generate_content(f"Context: {chunk}\n\nUser: {prompt}")
-        responses.append(response.text)
+        try:
+            if len(chunk) > 20000:  # If chunk is too large, use File API
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    temp_file.write(chunk.encode())
+                    temp_file_path = temp_file.name
+
+                file = genai.upload_file(temp_file_path)
+                response = model.generate_content(f"Context file uploaded: {file}\n\nUser: {prompt}")
+            else:
+                response = model.generate_content(f"Context: {chunk}\n\nUser: {prompt}")
+                
+            responses.append(response.text)
+        except Exception as e:
+            st.warning(f"Failed to get response for a chunk: {e}")
     
     return " ".join(responses)
 
