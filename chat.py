@@ -45,11 +45,21 @@ def scrape_all_urls(base_url):
 
     return all_content, list(visited_urls)
 
+# Function to split content into manageable chunks
+def split_content(content, max_size=20000):
+    return [content[i:i+max_size] for i in range(0, len(content), max_size)]
+
 # Function to get chatbot response
 def get_chatbot_response(prompt, context):
     model = genai.GenerativeModel('gemini-pro')
-    response = model.generate_content(f"Context: {context}\n\nUser: {prompt}")
-    return response.text
+    context_chunks = split_content(context)
+    responses = []
+    
+    for chunk in context_chunks:
+        response = model.generate_content(f"Context: {chunk}\n\nUser: {prompt}")
+        responses.append(response.text)
+    
+    return " ".join(responses)
 
 # Initialize session state
 if 'all_content' not in st.session_state:
