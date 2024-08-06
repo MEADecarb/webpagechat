@@ -57,4 +57,4 @@ st.write(st.session_state.content[:500] + "...")  # Display first 500 characters
 if st.button("Refresh Content"):
   st.session_state.content, st.session_state.links = scrape_website(BASE_URL)
   st.success("Content refreshed from the base URL")
-  st.experimental_rerun()
+  st.rerun()
