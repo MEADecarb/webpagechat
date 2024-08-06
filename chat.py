@@ -24,6 +24,22 @@ def scrape_website(url):
   
   return text, links
 
+# Function to scrape all indexed URLs
+def scrape_all_urls(base_url):
+  all_content = ""
+  visited_urls = set()
+  urls_to_visit = [base_url]
+
+  while urls_to_visit:
+      url = urls_to_visit.pop(0)
+      if url not in visited_urls:
+          visited_urls.add(url)
+          content, links = scrape_website(url)
+          all_content += f"\n\nContent from {url}:\n{content}"
+          urls_to_visit.extend([link for link in links if link not in visited_urls])
+
+  return all_content, list(visited_urls)
+
 # Function to get chatbot response
 def get_chatbot_response(prompt, context):
   model = genai.GenerativeModel('gemini-pro')
@@ -31,8 +47,8 @@ def get_chatbot_response(prompt, context):
   return response.text
 
 # Initialize session state
-if 'content' not in st.session_state:
-  st.session_state.content, st.session_state.links = scrape_website(BASE_URL)
+if 'all_content' not in st.session_state:
+  st.session_state.all_content, st.session_state.all_urls = scrape_all_urls(BASE_URL)
 
 # Streamlit UI
 st.title("Website Chatbot")
@@ -42,19 +58,19 @@ st.subheader("Chat with your website")
 user_input = st.text_input("You:", key="user_input")
 
 if user_input:
-  response = get_chatbot_response(user_input, st.session_state.content)
+  response = get_chatbot_response(user_input, st.session_state.all_content)
   st.text_area("Chatbot:", value=response, height=200, max_chars=None, key="chatbot_response")
 
 # Display total count of indexed URLs
 st.subheader("Website Pages")
-st.write(f"Total indexed URLs: {len(st.session_state.links)}")
+st.write(f"Total indexed URLs: {len(st.session_state.all_urls)}")
 
 # Display current content (for debugging)
 st.subheader("Current Content")
-st.write(st.session_state.content[:500] + "...")  # Display first 500 characters
+st.write(st.session_state.all_content[:500] + "...")  # Display first 500 characters
 
 # Add a button to refresh content
 if st.button("Refresh Content"):
-  st.session_state.content, st.session_state.links = scrape_website(BASE_URL)
-  st.success("Content refreshed from the base URL")
+  st.session_state.all_content, st.session_state.all_urls = scrape_all_urls(BASE_URL)
+  st.success("Content refreshed from all indexed URLs")
   st.rerun()
