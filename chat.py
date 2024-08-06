@@ -30,26 +30,31 @@ def get_chatbot_response(prompt, context):
   response = model.generate_content(f"Context: {context}\n\nUser: {prompt}")
   return response.text
 
-# Streamlit UI
-st.title("Maryland Energy Administration Chatbot")
-
-# Initialize session state for content and links
+# Initialize session state
 if 'content' not in st.session_state:
   st.session_state.content, st.session_state.links = scrape_website(BASE_URL)
-  st.success(f"Content scraped from {BASE_URL}")
+
+# Streamlit UI
+st.title("Website Chatbot")
 
 # Chat interface
-st.subheader("Chat with the Maryland Energy Administration website")
+st.subheader("Chat with your website")
 user_input = st.text_input("You:", key="user_input")
 
 if user_input:
   response = get_chatbot_response(user_input, st.session_state.content)
   st.text_area("Chatbot:", value=response, height=200, max_chars=None, key="chatbot_response")
 
-# Display scraped links
+# Display total count of indexed URLs
 st.subheader("Website Pages")
-for link in st.session_state.links:
-  if st.button(link):
-      st.session_state.content, st.session_state.links = scrape_website(link)
-      st.success(f"Content loaded from {link}")
-      st.experimental_rerun()
+st.write(f"Total indexed URLs: {len(st.session_state.links)}")
+
+# Display current content (for debugging)
+st.subheader("Current Content")
+st.write(st.session_state.content[:500] + "...")  # Display first 500 characters
+
+# Add a button to refresh content
+if st.button("Refresh Content"):
+  st.session_state.content, st.session_state.links = scrape_website(BASE_URL)
+  st.success("Content refreshed from the base URL")
+  st.experimental_rerun()
