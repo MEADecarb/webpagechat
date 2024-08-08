@@ -71,8 +71,9 @@ def hash_prompt_context(prompt, context):
 # Function to get chatbot response
 @st.cache_data(show_spinner=False)
 def get_chatbot_response_cached(prompt, context):
-    # Assuming genai has a different method or API structure
-    response = genai.Completion.create(prompt=prompt, context=context)
+    model = genai.GenerativeModel('gemini-pro')
+    # Assuming generate_text is the correct method
+    response = model.generate_text(prompt, context=context)
     return response
 
 # Function to write content to a text file
