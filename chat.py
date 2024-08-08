@@ -7,6 +7,7 @@ import hashlib
 import schedule
 import time
 import os
+from datetime import datetime
 
 # Configure the Gemini API using Streamlit secrets
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -85,7 +86,10 @@ def scrape_and_save_content():
     content, visited_urls = scrape_all_urls(BASE_URL)
     file_path = os.path.join('data', 'website_content.txt')
     write_content_to_file(content, file_path)
-    st.success(f"Content scraped and saved to {file_path}")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.success(f"Content scraped and saved to {file_path} on {timestamp}")
+    with open(os.path.join('data', 'timestamp.txt'), 'w') as f:
+        f.write(timestamp)
 
 # Schedule the scraping task to run on the 1st of every month
 schedule.every().month.at("00:00").do(scrape_and_save_content)
@@ -107,8 +111,32 @@ def main():
     
     if st.button("Scrape and Save Content"):
         scrape_and_save_content()
+    
+    # Display the last scraped timestamp
+    timestamp_path = os.path.join('data', 'timestamp.txt')
+    if os.path.exists(timestamp_path):
+        with open(timestamp_path, 'r') as f:
+            timestamp = f.read()
+        st.write(f"Content last scraped on: {timestamp}")
+    else:
+        st.write("Content has not been scraped yet.")
 
+    # Chatbot interaction
+    st.header("Chat with the Web Pages")
+    user_input = st.text_input("You: ")
+    if user_input:
+        content_path = os.path.join('data', 'website_content.txt')
+        if os.path.exists(content_path):
+            with open(content_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            chunks = split_content(content)
+            response = get_chatbot_response_cached(user_input, chunks)
+            st.write(f"AI: {response}")
+        else:
+            st.write("Content has not been scraped yet. Please scrape the content first.")
+    
     st.write("Scheduled scraping will occur on the 1st of every month.")
+    st.write("[Link to data folder](https://github.com/MEADecarb/webpagechat/tree/main/data)")
 
 if __name__ == "__main__":
     main()
