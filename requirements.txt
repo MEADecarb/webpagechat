@@ -1,7 +1,6 @@
-streamlit
-requests
-beautifulsoup4
-urllib3  # urllib3 is a dependency for requests
-hashlib
-google.generativeai  # Might require specific setup
-schedule
+streamlit==1.37.1
+google-generativeai
+requests==2.32.3
+beautifulsoup4==4.12.3
+urllib3==2.2.2
+schedule==1.2.0
