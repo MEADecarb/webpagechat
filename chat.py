@@ -7,7 +7,7 @@ import hashlib
 import schedule
 import time
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Configure the Gemini API using Streamlit secrets
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -71,9 +71,8 @@ def hash_prompt_context(prompt, context):
 # Function to get chatbot response
 @st.cache_data(show_spinner=False)
 def get_chatbot_response_cached(prompt, context):
-    model = genai.GenerativeModel('gemini-pro')
-    # Replace the following line with the actual API call to get the response
-    response = model.generate(prompt, context=context)
+    # Assuming genai has a different method or API structure
+    response = genai.Completion.create(prompt=prompt, context=context)
     return response
 
 # Function to write content to a text file
@@ -93,11 +92,7 @@ def scrape_and_save_content():
 
 # Schedule the scraping task to run on the 1st of every month at midnight
 def schedule_monthly_scraping():
-    now = datetime.now()
-    next_month = (now.replace(day=1) + timedelta(days=32)).replace(day=1)
-    next_run = next_month.replace(hour=0, minute=0, second=0, microsecond=0)
-    delay = (next_run - now).total_seconds()
-    schedule.every(delay).seconds.do(scrape_and_save_content).tag('monthly_job')
+    schedule.every().day.at("00:00").do(lambda: scrape_and_save_content() if datetime.now().day == 1 else None)
 
 # Function to run pending scheduled tasks
 def run_scheduled_tasks():
