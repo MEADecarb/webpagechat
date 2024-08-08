@@ -7,7 +7,7 @@ import hashlib
 import schedule
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configure the Gemini API using Streamlit secrets
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -91,8 +91,13 @@ def scrape_and_save_content():
     with open(os.path.join('data', 'timestamp.txt'), 'w') as f:
         f.write(timestamp)
 
-# Schedule the scraping task to run on the 1st of every month
-schedule.every().month.at("00:00").do(scrape_and_save_content)
+# Schedule the scraping task to run on the 1st of every month at midnight
+def schedule_monthly_scraping():
+    now = datetime.now()
+    next_month = (now.replace(day=1) + timedelta(days=32)).replace(day=1)
+    next_run = next_month.replace(hour=0, minute=0, second=0, microsecond=0)
+    delay = (next_run - now).total_seconds()
+    schedule.every(delay).seconds.do(scrape_and_save_content).tag('monthly_job')
 
 # Function to run pending scheduled tasks
 def run_scheduled_tasks():
@@ -139,4 +144,5 @@ def main():
     st.write("[Link to data folder](https://github.com/MEADecarb/webpagechat/tree/main/data)")
 
 if __name__ == "__main__":
+    schedule_monthly_scraping()
     main()
